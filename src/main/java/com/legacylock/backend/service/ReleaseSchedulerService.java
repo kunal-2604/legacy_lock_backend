@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -35,7 +36,8 @@ public class ReleaseSchedulerService {
      * Runs every 1 minute for development.
      * Later we can change this to hourly/daily.
      */
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(fixedRate = 60000)
+    @Transactional
     public void scheduledReleaseCheck() {
         runReleaseCheck();
     }
@@ -51,34 +53,49 @@ public class ReleaseSchedulerService {
         log.info("Running release scheduler...");
 
         List<ReleasePolicy> activePolicies =
-                releasePolicyRepository.findByStatus(ReleasePolicyStatus.ACTIVE);
+                releasePolicyRepository.findAllByStatusWithCapsuleAndOwner(ReleasePolicyStatus.ACTIVE);
 
         List<SchedulerPolicyResultResponse> results = new ArrayList<>();
 
         for (ReleasePolicy policy : activePolicies) {
-            SchedulerPolicyResultResponse result;
+
+            UUID policyId = policy.getId();
+
+            Capsule capsule = policy.getCapsule();
+            UUID capsuleId = capsule.getId();
+            String capsuleTitle = capsule.getTitle();
 
             try {
-                result = processPolicy(policy);
-            } catch (Exception exception) {
-                log.error(
-                        "Failed to process release policy {}: {}",
-                        policy.getId(),
-                        exception.getMessage(),
-                        exception
+                log.info(
+                        "Checking policy {} for capsule {}",
+                        policyId,
+                        capsuleId
                 );
 
-                result = SchedulerPolicyResultResponse.builder()
-                        .policyId(policy.getId())
-                        .capsuleId(policy.getCapsule() != null ? policy.getCapsule().getId() : null)
-                        .capsuleTitle(policy.getCapsule() != null ? policy.getCapsule().getTitle() : null)
-                        .result("FAILED")
-                        .reason(exception.getMessage())
-                        .checkedAt(LocalDateTime.now().toString())
-                        .build();
-            }
+                SchedulerPolicyResultResponse result = processPolicy(policy);
 
-            results.add(result);
+                results.add(result);
+
+            } catch (Exception e) {
+                log.error(
+                        "Failed to process release policy {} for capsule {}: {}",
+                        policyId,
+                        capsuleId,
+                        e.getMessage(),
+                        e
+                );
+
+                results.add(
+                        SchedulerPolicyResultResponse.builder()
+                                .policyId(policyId)
+                                .capsuleId(capsuleId)
+                                .capsuleTitle(capsuleTitle)
+                                .result("FAILED")
+                                .checkedAt(LocalDateTime.now().toString())
+                                .reason(e.getMessage())
+                                .build()
+                );
+            }
         }
 
         int releasedCount = (int) results.stream()
@@ -173,7 +190,7 @@ public class ReleaseSchedulerService {
         }
 
         List<CapsuleReceiver> assignedReceivers =
-                capsuleReceiverRepository.findByCapsuleOrderByAssignedAtDesc(capsule);
+                capsuleReceiverRepository.findByCapsuleWithReceiverOrderByAssignedAtDesc(capsule);
 
         if (assignedReceivers.isEmpty()) {
             return skipped(

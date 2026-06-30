@@ -41,4 +41,18 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, UUID> 
             Capsule capsule,
             Receiver receiver
     );
+
+    boolean existsByCapsuleAndReceiver_EmailAndStatus(
+            Capsule capsule,
+            String receiverEmail,
+            AccessGrantStatus status
+    );
+
+    Optional<AccessGrant> findByCapsuleAndReceiver_EmailAndStatus(
+            Capsule capsule,
+            String receiverEmail,
+            AccessGrantStatus status
+    );
+
+    List<AccessGrant> findByCapsuleId(UUID capsuleId);
 }

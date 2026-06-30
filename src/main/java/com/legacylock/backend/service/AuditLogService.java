@@ -9,7 +9,6 @@ import com.legacylock.backend.exceptions.LegacyLockException;
 import com.legacylock.backend.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -22,10 +21,7 @@ public class AuditLogService {
     private final AuditLogRepository auditLogRepository;
     private final CurrentUserService currentUserService;
 
-    /**
-     * Use REQUIRES_NEW so audit logging does not break main business transaction.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void log(
             Users actorUser,
             AuditAction action,

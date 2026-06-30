@@ -11,7 +11,7 @@ import lombok.Setter;
 public class ReleasePolicyCreateRequest {
 
     @NotNull(message = "Inactivity days is required")
-    @Min(value = 1, message = "Inactivity days must be at least 1")
+    @Min(value = 0, message = "Inactivity days must be at least 1")
     @Max(value = 3650, message = "Inactivity days cannot exceed 3650")
     private Integer inactivityDays;
 

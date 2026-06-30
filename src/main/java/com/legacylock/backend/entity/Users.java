@@ -41,6 +41,12 @@ public class Users {
     @Column(nullable = false)
     private boolean enabled;
 
+    @Column(name = "auth_provider", nullable = false)
+    private String authProvider;
+
+    @Column(name = "provider_id")
+    private String providerId;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 

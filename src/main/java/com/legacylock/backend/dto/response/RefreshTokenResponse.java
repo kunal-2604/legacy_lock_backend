@@ -10,13 +10,13 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuthResponse {
+public class RefreshTokenResponse {
 
     private UUID userId;
     private String name;
     private String email;
     private Role role;
-    private String token;
+
     private String accessToken;
     private String refreshToken;
     private String tokenType;

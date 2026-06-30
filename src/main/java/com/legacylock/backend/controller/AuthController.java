@@ -1,8 +1,11 @@
 package com.legacylock.backend.controller;
 
 import com.legacylock.backend.dto.request.LoginRequest;
+import com.legacylock.backend.dto.request.LogoutRequest;
+import com.legacylock.backend.dto.request.RefreshTokenRequest;
 import com.legacylock.backend.dto.request.RegisterRequest;
 import com.legacylock.backend.dto.response.AuthResponse;
+import com.legacylock.backend.dto.response.RefreshTokenResponse;
 import com.legacylock.backend.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +34,21 @@ public class AuthController {
     ) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshTokenResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        RefreshTokenResponse response = authService.refresh(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody LogoutRequest request
+    ) {
+        authService.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }
