@@ -44,6 +44,25 @@ public class S3StorageService {
         }
     }
 
+    public void uploadBytes(byte[] bytes, String storedFileKey, String contentType) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(storedFileKey)
+                    .contentType(contentType)
+                    .contentLength((long) bytes.length)
+                    .build();
+
+            s3Client.putObject(
+                    putObjectRequest,
+                    RequestBody.fromBytes(bytes)
+            );
+
+        } catch (Exception e) {
+            throw new LegacyLockException("Could not upload encrypted file to S3: " + e.getMessage());
+        }
+    }
+
     public byte[] downloadFile(String storedFileKey) {
         try {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()

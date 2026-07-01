@@ -9,6 +9,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -102,6 +104,82 @@ public class EncryptionService {
             throw e;
         } catch (Exception e) {
             throw new LegacyLockException("Could not decrypt capsule content: " + e.getMessage());
+        }
+    }
+
+    public byte[] encryptBytes(byte[] plainBytes) {
+        if (plainBytes == null || plainBytes.length == 0) {
+            return plainBytes;
+        }
+
+        try {
+            byte[] iv = new byte[IV_LENGTH_BYTES];
+            secureRandom.nextBytes(iv);
+
+            Cipher cipher = Cipher.getInstance(encryptionAlgorithm);
+
+            SecretKeySpec keySpec = new SecretKeySpec(
+                    getSecretKeyBytes(),
+                    "AES"
+            );
+
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(
+                    TAG_LENGTH_BITS,
+                    iv
+            );
+
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmParameterSpec);
+
+            byte[] encryptedBytes = cipher.doFinal(plainBytes);
+
+            ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + encryptedBytes.length);
+            byteBuffer.put(iv);
+            byteBuffer.put(encryptedBytes);
+
+            return byteBuffer.array();
+
+        } catch (Exception e) {
+            throw new LegacyLockException("Could not encrypt file bytes: " + e.getMessage());
+        }
+    }
+
+    public byte[] decryptBytes(byte[] encryptedFileBytes) {
+        if (encryptedFileBytes == null || encryptedFileBytes.length == 0) {
+            return encryptedFileBytes;
+        }
+
+        try {
+            if (encryptedFileBytes.length <= IV_LENGTH_BYTES) {
+                throw new LegacyLockException("Invalid encrypted file data");
+            }
+
+            byte[] iv = Arrays.copyOfRange(encryptedFileBytes, 0, IV_LENGTH_BYTES);
+            byte[] encryptedBytes = Arrays.copyOfRange(
+                    encryptedFileBytes,
+                    IV_LENGTH_BYTES,
+                    encryptedFileBytes.length
+            );
+
+            Cipher cipher = Cipher.getInstance(encryptionAlgorithm);
+
+            SecretKeySpec keySpec = new SecretKeySpec(
+                    getSecretKeyBytes(),
+                    "AES"
+            );
+
+            GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(
+                    TAG_LENGTH_BITS,
+                    iv
+            );
+
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmParameterSpec);
+
+            return cipher.doFinal(encryptedBytes);
+
+        } catch (LegacyLockException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new LegacyLockException("Could not decrypt file bytes: " + e.getMessage());
         }
     }
 

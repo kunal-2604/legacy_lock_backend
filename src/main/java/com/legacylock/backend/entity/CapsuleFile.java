@@ -39,6 +39,12 @@ public class CapsuleFile {
     @Column(name = "content_type", length = 150)
     private String contentType;
 
+    @Column(nullable = false)
+    private boolean encrypted;
+
+    @Column(name = "encryption_algorithm")
+    private String encryptionAlgorithm;
+
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 

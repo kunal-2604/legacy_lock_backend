@@ -32,6 +32,7 @@ public class ReceiverCapsuleFileService {
     private final CurrentUserService currentUserService;
     private final S3StorageService s3StorageService;
     private final AuditLogService auditLogService;
+    private final EncryptionService encryptionService;
 
     @Transactional(readOnly = true)
     public List<CapsuleFileResponse> getReleasedCapsuleFiles(UUID capsuleId) {
@@ -66,9 +67,11 @@ public class ReceiverCapsuleFileService {
                 )
                 .orElseThrow(() -> new LegacyLockException("File not found"));
 
-        byte[] fileBytes = s3StorageService.downloadFile(
-                capsuleFile.getStoredFileKey()
-        );
+        byte[] encryptedBytes = s3StorageService.downloadFile(capsuleFile.getStoredFileKey());
+
+        byte[] fileBytes = capsuleFile.isEncrypted()
+                ? encryptionService.decryptBytes(encryptedBytes)
+                : encryptedBytes;
 
         auditLogService.log(
                 currentUser,

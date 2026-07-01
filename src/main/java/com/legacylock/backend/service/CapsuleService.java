@@ -53,7 +53,7 @@ public class CapsuleService {
                 .owner(owner)
                 .title(normalizedTitle)
                 .description(normalizeOptionalText(request.getDescription()))
-                .content(request.getContent().trim())
+                .content(null)
                 .encryptedContent(encryptedContent)
                 .contentHash(contentHash)
                 .encryptionAlgorithm(encryptionService.getAlgorithm())

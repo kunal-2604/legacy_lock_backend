@@ -19,6 +19,8 @@ public class CapsuleFileResponse {
     private String originalFileName;
     private String storedFileKey;
     private String contentType;
+    private boolean encrypted;
+    private String encryptionAlgorithm;
     private Long fileSize;
     private String checksum;
 

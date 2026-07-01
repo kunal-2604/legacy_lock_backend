@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +33,7 @@ public class CapsuleFileService {
     private final CurrentUserService currentUserService;
     private final AuditLogService auditLogService;
     private final S3StorageService s3StorageService;
+    private final EncryptionService encryptionService;
 
     public CapsuleFileResponse uploadFile(UUID capsuleId, MultipartFile file) {
 
@@ -55,7 +57,21 @@ public class CapsuleFileService {
         String checksum = calculateChecksum(file);
 
         // Step 1: upload real file to S3
-        s3StorageService.uploadFile(file, storedFileKey);
+        byte[] originalFileBytes;
+
+        try {
+            originalFileBytes = file.getBytes();
+        } catch (IOException e) {
+            throw new LegacyLockException("Could not read uploaded file");
+        }
+
+        byte[] encryptedFileBytes = encryptionService.encryptBytes(originalFileBytes);
+
+        s3StorageService.uploadBytes(
+                encryptedFileBytes,
+                storedFileKey,
+                "application/octet-stream"
+        );
 
         // Step 2: save metadata in PostgreSQL
         CapsuleFile capsuleFile = CapsuleFile.builder()
@@ -63,6 +79,8 @@ public class CapsuleFileService {
                 .originalFileName(originalFileName)
                 .storedFileKey(storedFileKey)
                 .contentType(file.getContentType())
+                .encrypted(true)
+                .encryptionAlgorithm(encryptionService.getAlgorithm())
                 .fileSize(file.getSize())
                 .checksum(checksum)
                 .status(CapsuleFileStatus.ACTIVE)
@@ -204,6 +222,8 @@ public class CapsuleFileService {
                 .originalFileName(capsuleFile.getOriginalFileName())
                 .storedFileKey(capsuleFile.getStoredFileKey())
                 .contentType(capsuleFile.getContentType())
+                .encrypted(capsuleFile.isEncrypted())
+                .encryptionAlgorithm(capsuleFile.getEncryptionAlgorithm())
                 .fileSize(capsuleFile.getFileSize())
                 .checksum(capsuleFile.getChecksum())
                 .status(capsuleFile.getStatus())

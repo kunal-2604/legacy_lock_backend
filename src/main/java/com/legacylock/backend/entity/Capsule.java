@@ -31,7 +31,7 @@ public class Capsule {
     private String description;
 
     @Lob
-    @Column(name = "content", nullable = false)
+    @Column(name = "content")
     private String content;
 
     @Column(name = "encrypted_content", columnDefinition = "TEXT")
