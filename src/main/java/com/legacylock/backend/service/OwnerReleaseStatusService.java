@@ -128,7 +128,7 @@ public class OwnerReleaseStatusService {
     }
 
     private void validateOwnerRole(Users user) {
-        if (user.getRole() != Role.OWNER) {
+        if (!user.getRoles().contains(Role.OWNER)) {
             throw new LegacyLockException("Only owners can view release status");
         }
     }

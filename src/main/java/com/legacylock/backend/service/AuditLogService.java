@@ -57,7 +57,8 @@ public class AuditLogService {
     ) {
         Users currentUser = currentUserService.getCurrentUser();
 
-        if (currentUser.getRole() != Role.OWNER && currentUser.getRole() != Role.ADMIN) {
+        if (!currentUser.getRoles().contains(Role.OWNER)
+                && !currentUser.getRoles().contains(Role.ADMIN)) {
             throw new LegacyLockException("Not allowed to view audit logs");
         }
 

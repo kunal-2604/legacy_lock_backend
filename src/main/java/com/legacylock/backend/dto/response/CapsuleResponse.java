@@ -17,6 +17,8 @@ public class CapsuleResponse {
     private String title;
     private String description;
     private String content;
+    private String encryptionAlgorithm;
+    private String contentHash;
     private CapsuleStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -8,6 +8,7 @@ import com.legacylock.backend.dto.response.AuthResponse;
 import com.legacylock.backend.dto.response.RefreshTokenResponse;
 import com.legacylock.backend.entity.Users;
 import com.legacylock.backend.enums.AuditAction;
+import com.legacylock.backend.enums.Role;
 import com.legacylock.backend.exceptions.LegacyLockException;
 import com.legacylock.backend.repository.UserRepository;
 import com.legacylock.backend.security.JwtService;
@@ -19,6 +20,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +46,7 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .roles(Set.of(Role.OWNER, Role.RECEIVER))
                 .enabled(true)
                 .authProvider("LOCAL")
                 .providerId(null)
@@ -61,7 +64,7 @@ public class AuthService {
                 AuditAction.USER_REGISTERED,
                 "USER",
                 savedUser.getId(),
-                "User registered with role " + savedUser.getRole()
+                "User registered with role " + savedUser.getRoles()
         );
 
         return buildAuthResponse(savedUser, accessToken, refreshToken);
@@ -120,7 +123,7 @@ public class AuthService {
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .roles(user.getRoles())
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
                 .tokenType("Bearer")
@@ -147,7 +150,7 @@ public class AuthService {
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .roles(user.getRoles())
                 .token(accessToken)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)

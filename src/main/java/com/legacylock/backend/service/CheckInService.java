@@ -75,7 +75,7 @@ public class CheckInService {
     }
 
     private void validateOwnerRole(Users user) {
-        if (user.getRole() != Role.OWNER) {
+        if (!user.getRoles().contains(Role.OWNER)) {
             throw new LegacyLockException("Only owners can check in");
         }
     }

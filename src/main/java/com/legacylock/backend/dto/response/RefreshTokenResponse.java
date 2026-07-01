@@ -3,6 +3,7 @@ package com.legacylock.backend.dto.response;
 import com.legacylock.backend.enums.Role;
 import lombok.*;
 
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -15,7 +16,7 @@ public class RefreshTokenResponse {
     private UUID userId;
     private String name;
     private String email;
-    private Role role;
+    private Set<Role> roles;
 
     private String accessToken;
     private String refreshToken;

@@ -14,6 +14,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -59,7 +61,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .name(name)
                 .email(email)
                 .password(passwordEncoder.encode("OAUTH2_USER_NO_LOCAL_PASSWORD"))
-                .role(Role.OWNER)
+                .roles(Set.of(Role.OWNER, Role.RECEIVER))
                 .enabled(true)
                 .authProvider(provider)
                 .providerId(providerId)

@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -77,7 +78,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 .fromUriString(frontendRedirectUrl)
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
-                .queryParam("role", user.getRole().name())
+                .queryParam("roles", user.getRoles())
                 .queryParam("email", user.getEmail())
                 .build()
                 .toUriString();
@@ -91,7 +92,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 .name(name)
                 .email(email)
                 .password(passwordEncoder.encode("OAUTH2_USER_NO_LOCAL_PASSWORD"))
-                .role(Role.OWNER)
+                .roles(Set.of(Role.OWNER, Role.RECEIVER))
                 .enabled(true)
                 .authProvider("GOOGLE")
                 .providerId(providerId)

@@ -26,6 +26,7 @@ public class CapsuleService {
     private final CapsuleRepository capsuleRepository;
     private final CurrentUserService currentUserService;
     private final AuditLogService auditLogService;
+    private final EncryptionService encryptionService;
 
     public CapsuleResponse createCapsule(CapsuleCreateRequest request) {
 
@@ -45,11 +46,17 @@ public class CapsuleService {
             throw new LegacyLockException("Capsule with this title already exists");
         }
 
+        String encryptedContent = encryptionService.encrypt(request.getContent());
+        String contentHash = encryptionService.hashContent(request.getContent());
+
         Capsule capsule = Capsule.builder()
                 .owner(owner)
                 .title(normalizedTitle)
                 .description(normalizeOptionalText(request.getDescription()))
                 .content(request.getContent().trim())
+                .encryptedContent(encryptedContent)
+                .contentHash(contentHash)
+                .encryptionAlgorithm(encryptionService.getAlgorithm())
                 .status(CapsuleStatus.DRAFT)
                 .build();
 
@@ -133,7 +140,12 @@ public class CapsuleService {
 
         capsule.setTitle(normalizedTitle);
         capsule.setDescription(normalizeOptionalText(request.getDescription()));
-        capsule.setContent(request.getContent().trim());
+        if (request.getContent() != null) {
+            capsule.setContent(null);
+            capsule.setEncryptedContent(encryptionService.encrypt(request.getContent()));
+            capsule.setEncryptionAlgorithm(encryptionService.getAlgorithm());
+            capsule.setContentHash(encryptionService.hashContent(request.getContent()));
+        }
 
         Capsule updatedCapsule = capsuleRepository.save(capsule);
 
@@ -215,7 +227,7 @@ public class CapsuleService {
     }
 
     private void validateOwnerRole(Users user) {
-        if (user.getRole() != Role.OWNER) {
+        if (!user.getRoles().contains(Role.OWNER)) {
             throw new LegacyLockException("Only owners can manage capsules");
         }
     }
@@ -233,7 +245,9 @@ public class CapsuleService {
                 .id(capsule.getId())
                 .title(capsule.getTitle())
                 .description(capsule.getDescription())
-                .content(capsule.getContent())
+                .content(encryptionService.decrypt(capsule.getEncryptedContent()))
+                .encryptionAlgorithm(capsule.getEncryptionAlgorithm())
+                .contentHash(capsule.getContentHash())
                 .status(capsule.getStatus())
                 .createdAt(capsule.getCreatedAt())
                 .updatedAt(capsule.getUpdatedAt())

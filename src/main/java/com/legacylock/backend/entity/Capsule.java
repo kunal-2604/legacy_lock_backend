@@ -34,6 +34,15 @@ public class Capsule {
     @Column(name = "content", nullable = false)
     private String content;
 
+    @Column(name = "encrypted_content", columnDefinition = "TEXT")
+    private String encryptedContent;
+
+    @Column(name = "encryption_algorithm")
+    private String encryptionAlgorithm;
+
+    @Column(name = "content_hash", length = 128)
+    private String contentHash;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private CapsuleStatus status;

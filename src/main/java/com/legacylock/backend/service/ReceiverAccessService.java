@@ -28,6 +28,7 @@ public class ReceiverAccessService {
     private final AccessGrantRepository accessGrantRepository;
     private final ReceiverAcknowledgementRepository acknowledgementRepository;
     private final AuditLogService auditLogService;
+    private final EncryptionService encryptionService;
 
     public List<ReceiverCapsuleResponse> getMyReleasedCapsules() {
 
@@ -101,7 +102,7 @@ public class ReceiverAccessService {
     }
 
     private void validateReceiverRole(Users user) {
-        if (user.getRole() != Role.RECEIVER) {
+        if (!user.getRoles().contains(Role.RECEIVER)) {
             throw new LegacyLockException("Only receivers can access released capsules");
         }
     }
@@ -142,7 +143,7 @@ public class ReceiverAccessService {
                 .capsuleId(capsule.getId())
                 .title(capsule.getTitle())
                 .description(capsule.getDescription())
-                .content(capsule.getContent())
+                .content(encryptionService.decrypt(capsule.getEncryptedContent()))
                 .status(capsule.getStatus())
                 .ownerName(owner.getName())
                 .ownerEmail(owner.getEmail())

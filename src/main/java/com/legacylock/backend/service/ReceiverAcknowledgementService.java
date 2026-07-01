@@ -110,7 +110,7 @@ public class ReceiverAcknowledgementService {
     }
 
     private void validateReceiverRole(Users user) {
-        if (user.getRole() != Role.RECEIVER) {
+        if (!user.getRoles().contains(Role.RECEIVER)) {
             throw new LegacyLockException("Only receivers can acknowledge capsules");
         }
     }
