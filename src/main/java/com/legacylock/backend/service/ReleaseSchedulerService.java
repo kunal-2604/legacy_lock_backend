@@ -31,6 +31,7 @@ public class ReleaseSchedulerService {
     private final AccessGrantRepository accessGrantRepository;
     private final CapsuleRepository capsuleRepository;
     private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
     /**
      * Runs every 1 minute for development.
@@ -161,28 +162,50 @@ public class ReleaseSchedulerService {
                 .findFirstByOwnerOrderByCheckedInAtDesc(owner)
                 .orElse(null);
 
-        if (latestCheckIn == null) {
+        LocalDateTime lastActivityAt = latestCheckIn != null
+                ? latestCheckIn.getCheckedInAt()
+                : capsule.getCreatedAt();
+
+        LocalDateTime inactivityDeadline = lastActivityAt
+                .plusDays(policy.getInactivityDays());
+
+        LocalDateTime releaseAt = inactivityDeadline
+                .plusDays(policy.getGraceDays());
+
+        if (now.isBefore(inactivityDeadline)) {
             return skipped(
                     policy,
-                    "Owner has no check-ins",
+                    "Owner is still within inactivity period",
                     now,
-                    null,
-                    null,
+                    lastActivityAt,
+                    releaseAt,
                     0,
                     0
             );
         }
 
-        LocalDateTime releaseAt = latestCheckIn.getCheckedInAt()
-                .plusDays(policy.getInactivityDays())
-                .plusDays(policy.getGraceDays());
-
         if (now.isBefore(releaseAt)) {
+            boolean reminderSent = sendDueReminderIfNeeded(
+                    policy,
+                    capsule,
+                    owner,
+                    lastActivityAt,
+                    inactivityDeadline,
+                    releaseAt,
+                    now
+            );
+
+            if (reminderSent) {
+                releasePolicyRepository.save(policy);
+            }
+
             return skipped(
                     policy,
-                    "Capsule is not eligible yet",
+                    reminderSent
+                            ? "Reminder email sent to owner"
+                            : "Capsule is in grace period. No reminder due now",
                     now,
-                    latestCheckIn.getCheckedInAt(),
+                    lastActivityAt,
                     releaseAt,
                     0,
                     0
@@ -246,7 +269,7 @@ public class ReleaseSchedulerService {
                 .reason("Capsule released successfully")
                 .inactivityDays(policy.getInactivityDays())
                 .graceDays(policy.getGraceDays())
-                .latestCheckInAt(latestCheckIn.getCheckedInAt().toString())
+                .latestCheckInAt(lastActivityAt.toString())
                 .releaseAt(releaseAt.toString())
                 .checkedAt(now.toString())
                 .assignedReceivers(assignedReceivers.size())
@@ -305,6 +328,150 @@ public class ReleaseSchedulerService {
         }
 
         return createdGrantCount;
+    }
+
+    private boolean sendDueReminderIfNeeded(
+            ReleasePolicy policy,
+            Capsule capsule,
+            Users owner,
+            LocalDateTime lastActivityAt,
+            LocalDateTime inactivityDeadline,
+            LocalDateTime releaseAt,
+            LocalDateTime now
+    ) {
+        if (policy.getGraceDays() == null || policy.getGraceDays() <= 0) {
+            return false;
+        }
+
+        LocalDateTime secondReminderAt = calculateSecondReminderAt(
+                inactivityDeadline,
+                policy.getGraceDays()
+        );
+
+        LocalDateTime finalReminderAt = releaseAt.minusDays(1);
+
+        if (policy.getFirstReminderSentAt() == null
+                && !now.isBefore(inactivityDeadline)) {
+
+            sendOwnerReminderEmail(
+                    policy,
+                    capsule,
+                    owner,
+                    lastActivityAt,
+                    releaseAt,
+                    "FIRST"
+            );
+
+            policy.setFirstReminderSentAt(now);
+            return true;
+        }
+
+        if (policy.getSecondReminderSentAt() == null
+                && !now.isBefore(secondReminderAt)) {
+
+            sendOwnerReminderEmail(
+                    policy,
+                    capsule,
+                    owner,
+                    lastActivityAt,
+                    releaseAt,
+                    "SECOND"
+            );
+
+            policy.setSecondReminderSentAt(now);
+            return true;
+        }
+
+        if (policy.getFinalReminderSentAt() == null
+                && !now.isBefore(finalReminderAt)) {
+
+            sendOwnerReminderEmail(
+                    policy,
+                    capsule,
+                    owner,
+                    lastActivityAt,
+                    releaseAt,
+                    "FINAL"
+            );
+
+            policy.setFinalReminderSentAt(now);
+            return true;
+        }
+
+        return false;
+    }
+
+    private LocalDateTime calculateSecondReminderAt(
+            LocalDateTime inactivityDeadline,
+            Integer graceDays
+    ) {
+        int halfGraceDays = Math.max(1, graceDays / 2);
+        return inactivityDeadline.plusDays(halfGraceDays);
+    }
+
+    private void sendOwnerReminderEmail(
+            ReleasePolicy policy,
+            Capsule capsule,
+            Users owner,
+            LocalDateTime lastActivityAt,
+            LocalDateTime releaseAt,
+            String reminderType
+    ) {
+        String subject = switch (reminderType) {
+            case "FIRST" -> "LegacyLock Reminder: Please check in";
+            case "SECOND" -> "LegacyLock Reminder: Your capsule is still pending release";
+            case "FINAL" -> "LegacyLock Final Reminder: Capsule release is near";
+            default -> "LegacyLock Reminder";
+        };
+
+        String body = """
+            Hello %s,
+
+            This is a LegacyLock safety reminder.
+
+            We have not detected a check-in for your account.
+
+            Capsule:
+            %s
+
+            Last activity:
+            %s
+
+            Scheduled release time:
+            %s
+
+            Please log in and check in if you are safe and active.
+            If you check in before the release time, your capsule will not be released.
+
+            Regards,
+            LegacyLock
+            """.formatted(
+                owner.getName(),
+                capsule.getTitle(),
+                lastActivityAt,
+                releaseAt
+        );
+
+        emailService.sendSimpleEmail(
+                owner.getEmail(),
+                subject,
+                body
+        );
+
+        auditLogService.log(
+                owner,
+                AuditAction.OWNER_REMINDER_EMAIL_SENT,
+                "RELEASE_POLICY",
+                policy.getId(),
+                reminderType + " reminder email sent for capsule " + capsule.getTitle()
+        );
+
+        log.info(
+                "{} reminder email sent to owner {} for capsule {}",
+                reminderType,
+                owner.getEmail(),
+                capsule.getId()
+        );
     }
 
     private SchedulerPolicyResultResponse skipped(

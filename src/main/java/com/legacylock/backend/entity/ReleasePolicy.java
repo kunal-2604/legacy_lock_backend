@@ -42,6 +42,15 @@ public class ReleasePolicy {
     @Column(nullable = false, length = 30)
     private ReleasePolicyStatus status;
 
+    @Column(name = "first_reminder_sent_at")
+    private LocalDateTime firstReminderSentAt;
+
+    @Column(name = "second_reminder_sent_at")
+    private LocalDateTime secondReminderSentAt;
+
+    @Column(name = "final_reminder_sent_at")
+    private LocalDateTime finalReminderSentAt;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 

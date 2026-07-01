@@ -7,6 +7,8 @@ import com.legacylock.backend.dto.request.RegisterRequest;
 import com.legacylock.backend.dto.response.AuthResponse;
 import com.legacylock.backend.dto.response.RefreshTokenResponse;
 import com.legacylock.backend.service.AuthService;
+import com.legacylock.backend.dto.request.ForgotPasswordRequest;
+import com.legacylock.backend.dto.request.ResetPasswordRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -42,6 +44,25 @@ public class AuthController {
     ) {
         RefreshTokenResponse response = authService.refresh(request);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+        return ResponseEntity.ok(authService.verifyEmail(token));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @RequestBody ForgotPasswordRequest request
+    ) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+            @RequestBody ResetPasswordRequest request
+    ) {
+        return ResponseEntity.ok(authService.resetPassword(request));
     }
 
     @PostMapping("/logout")

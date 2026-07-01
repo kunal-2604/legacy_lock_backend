@@ -23,6 +23,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.HashSet;
 
 @Component
 @RequiredArgsConstructor
@@ -74,11 +76,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 "User logged in using GOOGLE OAuth2"
         );
 
+        String roles = user.getRoles()
+                .stream()
+                .map(Role::name)
+                .collect(Collectors.joining(","));
+
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(frontendRedirectUrl)
                 .queryParam("accessToken", accessToken)
                 .queryParam("refreshToken", refreshToken)
-                .queryParam("roles", user.getRoles())
+                .queryParam("roles", roles)
                 .queryParam("email", user.getEmail())
                 .build()
                 .toUriString();
@@ -92,7 +99,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                 .name(name)
                 .email(email)
                 .password(passwordEncoder.encode("OAUTH2_USER_NO_LOCAL_PASSWORD"))
-                .roles(Set.of(Role.OWNER, Role.RECEIVER))
+                .roles(new HashSet<>(Set.of(Role.OWNER, Role.RECEIVER)))
                 .enabled(true)
                 .authProvider("GOOGLE")
                 .providerId(providerId)
@@ -116,6 +123,19 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         user.setAuthProvider("GOOGLE");
         user.setProviderId(providerId);
         user.setEnabled(true);
+
+        Set<Role> roles = user.getRoles();
+
+        if (roles == null) {
+            roles = new HashSet<>();
+        } else {
+            roles = new HashSet<>(roles);
+        }
+
+        roles.add(Role.OWNER);
+        roles.add(Role.RECEIVER);
+
+        user.setRoles(roles);
 
         userRepository.save(user);
     }

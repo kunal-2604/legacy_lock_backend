@@ -24,6 +24,10 @@ public class ReleasePolicyResponse {
 
     private ReleasePolicyStatus status;
 
+    private LocalDateTime firstReminderSentAt;
+    private LocalDateTime secondReminderSentAt;
+    private LocalDateTime finalReminderSentAt;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

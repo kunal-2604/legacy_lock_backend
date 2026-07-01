@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -26,41 +27,40 @@ public class ReceiverService {
     private final CurrentUserService currentUserService;
     private final AuditLogService auditLogService;
 
+    @Transactional
     public ReceiverResponse createReceiver(ReceiverCreateRequest request) {
-
         Users owner = currentUserService.getCurrentUser();
 
-        validateOwnerRole(owner);
+        Optional<Receiver> existingReceiverOpt =
+                receiverRepository.findByOwnerAndEmailIgnoreCase(owner, request.getEmail());
 
-        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        if (existingReceiverOpt.isPresent()) {
+            Receiver existingReceiver = existingReceiverOpt.get();
 
-        boolean alreadyExists = receiverRepository.existsByOwnerAndEmailAndStatus(
-                owner,
-                normalizedEmail,
-                ReceiverStatus.ACTIVE
-        );
+            if (existingReceiver.getStatus() == ReceiverStatus.REMOVED) {
 
-        if (alreadyExists) {
-            throw new LegacyLockException("Receiver with this email already exists");
+                existingReceiver.setName(request.getName());
+                existingReceiver.setEmail(request.getEmail());
+                existingReceiver.setPhone(request.getPhone());
+                existingReceiver.setStatus(ReceiverStatus.ACTIVE);
+
+                Receiver savedReceiver = receiverRepository.save(existingReceiver);
+
+                return mapToResponse(savedReceiver);
+            }
+
+            throw new LegacyLockException("Receiver with this email already exists.");
         }
 
         Receiver receiver = Receiver.builder()
                 .owner(owner)
-                .name(request.getName().trim())
-                .email(normalizedEmail)
+                .name(request.getName())
+                .email(request.getEmail())
                 .phone(request.getPhone())
                 .status(ReceiverStatus.ACTIVE)
                 .build();
 
         Receiver savedReceiver = receiverRepository.save(receiver);
-
-        auditLogService.log(
-                owner,
-                AuditAction.RECEIVER_CREATED,
-                "RECEIVER",
-                savedReceiver.getId(),
-                "Receiver created: " + savedReceiver.getEmail()
-        );
 
         return mapToResponse(savedReceiver);
     }

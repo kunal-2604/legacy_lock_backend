@@ -28,4 +28,8 @@ public interface ReceiverRepository extends JpaRepository<Receiver, UUID> {
             String email,
             ReceiverStatus status
     );
+
+    Optional<Receiver> findByOwnerAndEmailIgnoreCase(Users owner, String email);
+
+    Optional<Receiver> findByOwnerIdAndEmailIgnoreCase(UUID ownerId, String email);
 }

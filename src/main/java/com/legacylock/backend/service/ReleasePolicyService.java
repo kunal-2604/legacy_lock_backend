@@ -232,6 +232,9 @@ public class ReleasePolicyService {
                         policy.getInactivityDays() + policy.getGraceDays()
                 )
                 .status(policy.getStatus())
+                .firstReminderSentAt(policy.getFirstReminderSentAt())
+                .secondReminderSentAt(policy.getSecondReminderSentAt())
+                .finalReminderSentAt(policy.getFinalReminderSentAt())
                 .createdAt(policy.getCreatedAt())
                 .updatedAt(policy.getUpdatedAt())
                 .build();
